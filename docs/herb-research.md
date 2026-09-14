@@ -1,44 +1,81 @@
-# Herb source inspection
+# Herb capabilities used by Ruphy
 
-Inspected on 2026-09-14 at main commit `d36f73737f43b7306f561efa32283b89e3b39c6f`. Claims below describe source inspection, not a runtime compatibility guarantee for a released gem.
+Source inspection dated 2026-09-14, pinned to Herb main commit
+`d36f73737f43b7306f561efa32283b89e3b39c6f`. Runtime verification used the released
+Herb 0.10.3 native gem (libherb 0.10.3, libprism 1.9.0). Main-only APIs are not
+assumed to exist in that release. See [verification](progress.md) and
+[architecture decisions](decisions.md).
 
-## Ruby parsing and AST
+## Parsing, locations and diffing
 
-[`lib/herb.rb`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb.rb) defines `Herb.parse(source, **options)` and delegates to `Backend.parse`. [`ext/herb/extension.c`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/ext/herb/extension.c) registers the native parse and diff entry points. `Herb.parse_ruby(source)` is a separate Prism wrapper; it does not parse HTML+ERB.
+| Capability | Verified source contract | Ruphy use |
+| --- | --- | --- |
+| `Herb.parse(source, **options)` | [Ruby wrapper][ruby] delegates to the [native backend][native]; `ParseResult` exposes the tree and errors | Parse original and candidate with whitespace tracking; reject parse errors |
+| AST traversal | [Node][node] exposes child nodes and locations; [ParseResult][parse] includes recursive errors | Find a unique literal input and its quoted placeholder |
+| Source coordinates | [Ruby reference][reference] and [lexer][lexer] distinguish character columns from byte positions; lines are one-based, columns zero-based and ends exclusive | Convert locations to UTF-8 character offsets; preserve unrelated source and line endings |
+| `Herb.diff(old, new)` | [Result][diff-result] contains operations with type, path, old/new nodes and indices; [tests][diff-tests] demonstrate attribute, text and structural changes | Require an identical diff or one `attribute_value_changed`; report the real diff |
 
-[`ParseResult`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/parse_result.rb) exposes `value`, `options`, `errors`, `visit`, and `locate`. Its errors include recursive AST errors. [`AST::Node`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/ast/node.rb) exposes `location`, `child_nodes`, and `compact_child_nodes`. Use the actual classes/traversal, not pattern matching on ERB text.
+`Herb.parse_ruby` wraps Prism for Ruby code; HTML+ERB uses `Herb.parse`. AST paths
+are structural source paths, not browser DOM identity. The POC's tests cover
+Unicode (including astral characters), CRLF and actual attribute diffs.
 
-The [Ruby reference](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/docs/docs/bindings/ruby/reference.md) includes parser, visitor, and locate examples. Locations have one-based lines, zero-based character columns and exclusive ends. [`src/lexer.c`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/src/lexer.c) advances byte positions separately from UTF-8 character columns. Tokens also expose a range; nodes expose locations. Do not interchange character columns, byte offsets, and browser UTF-16 offsets. Runtime tests must cover non-ASCII text before a selected attribute and CRLF input.
+## Rewriting gap in the Ruby binding
 
-## Rewriting/mutation
+The supported TypeScript [rewriter][rewriter] offers `ASTRewriter`,
+`StringRewriter`, `rewrite` and `rewriteString`. Its [implementation][rewrite]
+applies transformations and prints through `IdentityPrinter`. It catches
+individual rewriter errors, and `rewriteString` returns unchanged input on parse
+failure; returned output alone does not establish a successful mutation.
 
-The supported [`@herb-tools/rewriter`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/javascript/packages/rewriter/README.md) offers `ASTRewriter`, `StringRewriter`, `rewrite`, and `rewriteString`, with concrete examples. [`rewrite.ts`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/javascript/packages/rewriter/src/rewrite.ts) applies transformations and calls `IdentityPrinter.print`. It catches individual rewriter errors; `rewriteString` returns the original input on parse failure. Callers must not equate returned output with successful mutation.
+No equivalent Ruby source-rewriter/identity-printer API was found in the inspected
+Ruby implementation. Ruphy therefore edits the inner source range of one literal
+attribute, then reparses and checks the result. This is a Ruby binding gap, not
+an absence of rewriting across Herb. A small Ruby source-edit/identity-print API
+is a [candidate upstream contribution](decisions.md#candidate-upstream-herb-contribution).
 
-No equivalent Ruby source-rewriter/identity-printer interface was found in `lib/` or the Ruby public wrapper. This is a binding-specific gap, not a claim that Herb lacks rewriting altogether. For the proposed Ruby process, use a small deterministic source-location edit and independently validate its result. Do not introduce a JS bridge without revisiting dependency scope.
+## Dev server and browser patching
 
-## Diff
+The [dev-server overview][dev] describes file watching, WebSocket updates,
+patching and reload fallback, and labels the server experimental. At the pinned
+revision, [Classifier][classifier] reparses and diffs sources, while
+[Pipeline][pipeline] also tracks compiler versions, manifests and diagnostics.
+The browser [hot-reload implementation][hot-reload] distinguishes missing
+runtime, regions, slots, server mode and standalone operation.
 
-[`Herb.diff`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb.rb) takes two source strings, optionally `track_whitespace_changes:`, and returns `Herb::Diff::Result`. [`Result`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/diff/result.rb) exposes `identical?`, `changed?`, `operations`, and `operation_count`. Operations carry type, AST path, old/new nodes, and indices.
-
-[`test/diff/diff_test.rb`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/test/diff/diff_test.rb) demonstrates `:attribute_value_changed`, `:text_changed`, insertion/removal, moves and ERB changes. Compute this actual diff; do not substitute a text diff labeled as Herb. AST paths do not establish rendered DOM identity.
-
-## Dev server and browser
-
-The [dev-server documentation](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/docs/docs/projects/dev-server.md) describes `herb dev`, file watching, WebSocket messages, patching and reload fallback, and marks the server experimental.
-
-Current implementation is richer than that overview: [`Classifier`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/dev/classifier.rb) reparses and computes Herb diff; [`Pipeline`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/dev/pipeline.rb) tracks versions, manifests and diagnostics, using an optional compiler. Browser [`hot-reload.ts`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/javascript/packages/dev-tools/src/dev-server/hot-reload.ts) explicitly distinguishes missing runtime, regions, slots, server mode, and standalone operation. Therefore merely starting `herb dev` does not prove arbitrary Rails DOM patching.
-
-For the first POC, return the computed diff to Ruphino for visibility and reload the Rails page after a successful write. This meets the requested update-or-reload outcome without requiring ReActionView or implementing a generic patcher.
+Starting `herb dev` alone does not establish arbitrary Rails DOM patching.
+Ruphy's first proof uses a full Rails reload and exposes Herb's diff for inspection;
+it does not require ReActionView or replace the Rails rendering engine.
 
 ## Render graph
 
-[`Herb::Analysis::RenderGraph`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/analysis/render_graph.rb) stores callers, roots, unresolved renders and skipped files; `complete?` distinguishes incomplete analysis. Its [`Builder`](https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/analysis/render_graph/builder.rb) consumes a partial index and parses with `render_nodes`, `prism_nodes`, and `action_view_helpers`. This is static render analysis, not universal runtime DOM-to-source provenance. Defer integrating it for the single-view proof.
+[RenderGraph][graph] tracks callers, roots, unresolved renders and skipped files;
+`complete?` reports incomplete analysis. Its [Builder][builder] consumes a partial
+index and parses with render-node, Prism-node and Action View helper options.
+This is static render analysis, not universal runtime DOM-to-source provenance.
+The single-view POC does not integrate it.
 
-## Issues inspected
+## Relevant upstream issues
 
-- [#1615: Convert to `tag.pre`](https://github.com/marcoroth/herb/issues/1615), open: illustrates nontrivial semantics of helper rewrites. Literal HTML attribute editing avoids this transformation.
-- [#2215: Embedded JS backend for Node-free linting](https://github.com/marcoroth/herb/issues/2215), open in inspected search results: relevant to Ruby/JS capability boundaries, but not evidence of a supported Ruby source rewriter.
-- [#2294: Non-root view paths](https://github.com/marcoroth/herb/issues/2294), open: render analysis does not universally resolve multi-root Rails applications; irrelevant to one fixed toy view but material to future expansion.
-- [#2352: Compiled line-number preservation](https://github.com/marcoroth/herb/issues/2352), open: reinforces keeping source locations distinct from generated Ruby locations.
+These issues were inspected on 2026-09-14; their current status may differ.
 
-Issue searches were targeted samples, not an exhaustive issue audit. A GitHub API search for issues labeled `dev-server` returned zero results; it does not establish an absence of dev-server defects.
+- [#1615](https://github.com/marcoroth/herb/issues/1615): helper rewriting can have nontrivial output semantics. Literal attribute edits avoid that conversion.
+- [#2215](https://github.com/marcoroth/herb/issues/2215): embedded JavaScript linting explores binding boundaries; it does not establish a supported Ruby source rewriter.
+- [#2294](https://github.com/marcoroth/herb/issues/2294): multi-root view resolution matters before expanding static render analysis to arbitrary Rails projects.
+- [#2352](https://github.com/marcoroth/herb/issues/2352): generated Ruby line preservation reinforces the distinction between source and compiled locations.
+
+[ruby]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb.rb
+[native]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/ext/herb/extension.c
+[node]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/ast/node.rb
+[parse]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/parse_result.rb
+[reference]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/docs/docs/bindings/ruby/reference.md
+[lexer]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/src/lexer.c
+[diff-result]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/diff/result.rb
+[diff-tests]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/test/diff/diff_test.rb
+[rewriter]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/javascript/packages/rewriter/README.md
+[rewrite]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/javascript/packages/rewriter/src/rewrite.ts
+[dev]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/docs/docs/projects/dev-server.md
+[classifier]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/dev/classifier.rb
+[pipeline]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/dev/pipeline.rb
+[hot-reload]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/javascript/packages/dev-tools/src/dev-server/hot-reload.ts
+[graph]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/analysis/render_graph.rb
+[builder]: https://github.com/marcoroth/herb/blob/d36f73737f43b7306f561efa32283b89e3b39c6f/lib/herb/analysis/render_graph/builder.rb

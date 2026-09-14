@@ -1,112 +1,69 @@
-# Ruphy Studio progress
+# Milestones and verification
 
-## README identity and vision
+## First Rails/Herb editing loop — completed 2026-09-14
 
-Reused main's Ruphino mascot, Idea-to-IPO tagline, Delphi inspiration, personal
-origin story and guiding quote. The README separates long-term product goals
-from the current Rails/Herb proof. Its image references the existing gem asset;
-no duplicate image or legacy runtime instructions were restored. Documentation
-verification: checked the asset path and reviewed the diff; `git diff --check`
-passed. No application code changed or application tests rerun for this edit.
+Implemented in commit `6bad733`. The actual Rails page is the canvas; a
+development-only gem connects Ruphino to a resident Ruby process that edits one
+real ERB view through Herb. The supported operation changes the placeholder of
+`customer_name` or `customer_email`.
 
-## 2026-09-14 — Completed first end-to-end proof
+Recorded verification environment: Ruby 3.4.9 on arm64-darwin25, Rails 8.1.3,
+Puma 7.0.4, Herb/libherb 0.10.3 and libprism 1.9.0.
 
-Branch: `feature/herb-rad-poc`, based on main `b333b47`.
+| Check | Recorded result |
+| --- | --- |
+| `mise run setup` | Bundle installed successfully |
+| `mise run test` | 17 runs, 50 assertions, no failures, errors or skips |
+| Browser editing loop | Selected Name, changed its placeholder, observed reload and the new DOM value |
+| Source and diff | Saved ERB reparsed successfully; Herb reported one `attribute_value_changed` |
+| Browser console | No errors observed during the proof |
+| Process lifecycle | Graceful stop/restart succeeded; a second socket owner was refused |
 
-### Inspection before coding
+These are dated results, not claims that a server is currently running or that
+later revisions have been tested. Rack mock requests emitted a Ruby
+future-frozen-string warning without failing the suite.
 
-- Inspected main and all five historical/POC branches. Findings: `docs/history.md`.
-- Inspected Herb main commit `d36f73737f43b7306f561efa32283b89e3b39c6f`, docs,
-  examples, relevant issues, Ruby/native APIs, locations, rewriting, diffing,
-  dev server, browser patching and render graph. Sources: `docs/herb-research.md`.
-- Verified actual installed Herb 0.10.3 parsing/AST/diff APIs before implementing.
+## Reproduce automated verification
 
-### Implemented
+From the repository root, follow the [setup instructions](../README.md#run), then:
 
-- Real Rails 8 Customer form, with name/email inputs and a rendered ERB heading.
-- Local development-only Ruphy gem injects browser controls into rendered HTML.
-- Separate resident Ruby process owns state and mutation processing over a Unix socket.
-- One structured mutation: select a literal input and change its placeholder.
-- Herb-based structural selection; deterministic source-location edit; candidate
-  reparse and postcondition; actual Herb diff; atomic write; browser reload.
-- mise configuration and setup/test/dev tasks, README and decisions documentation.
-- Removed active desktop-shell code; reused only the Ruphino image.
+```sh
+mise run test
+```
 
-### Commands and results
+The [test suite](../test/poc_test.rb) covers source preservation, Unicode and CRLF,
+HTML/ERB escaping, empty/no-op edits, stale revisions, intervening file changes,
+ambiguous IDs (including entity-equivalent IDs), dynamic/conditional targets,
+malformed source, missing/unquoted placeholders, symlinks and unsupported requests.
+It also checks middleware failures and origin restrictions, competing requests to
+a separate resident process, and Rails boots in development, test and production.
 
-- `mise exec -- ruby -v`: Ruby 3.4.9, arm64-darwin25.
-- `mise exec -- gem install herb -v 0.10.3 --no-document`: installed the official
-  native gem into the workspace-local gem directory.
-- `mise exec -- bundle check`: dependencies satisfied.
-- `mise run setup`: success; 5 Gemfile dependencies, 48 gems available to bundle.
-- `mise run test`: **17 runs, 50 assertions, 0 failures, 0 errors, 0 skips**.
-- `git diff --check`: passed.
-- `mise run dev`: resident and Puma started; Rails served on 127.0.0.1:3000.
-- Herb reparsed the actual edited Customer view without errors.
-- Browser console inspection: no errors.
+## Reproduce the browser proof
 
-Tests cover exact source preservation, Unicode before ranges (including astral
-characters), CRLF, HTML/ERB escaping, empty and unchanged values, stale revisions,
-external changes during validation, duplicate/entity-equivalent IDs, dynamic and
-conditional targets, malformed source, unquoted/missing placeholders, symlink
-rejection, unknown operations, unavailable resident and middleware origin checks.
-A separate-process socket test sends two competing mutations at the same revision:
-one succeeds and the other returns 409. Separate Rails boots confirm the middleware
-is present in development and absent in test and production.
+1. Run `mise run dev` and visit http://127.0.0.1:3000.
+2. Open Ruphino and click the Name field on the actual Customer form.
+3. Note its original placeholder, enter a different value and click **Apply to Rails view**.
+4. Confirm that the page reloads and the field displays the new placeholder.
+5. Open **Last Herb diff**: expect one `attribute_value_changed` operation. Its
+   AST path depends on source structure; it is not a stable DOM identifier.
+6. Inspect `examples/customer/app/views/customers/new.html.erb`: only the selected
+   placeholder's contents should change. Confirm the saved file parses:
 
-The first test run exposed a missing `rack/request` require; this was fixed.
-Initial Rails HTTP inspection exposed the minimal controller's missing explicit
-application layout; this was fixed before the browser proof. Rack mock requests
-emit a Ruby future-frozen-string warning, but all assertions pass.
+```sh
+mise exec -- bundle exec ruby -rherb -e 'result = Herb.parse(File.read("examples/customer/app/views/customers/new.html.erb")); abort result.errors.map(&:message).join("\n") unless result.errors.empty?; puts "ERB valid"'
+```
 
-### Browser proof (real UI actions)
+This exercise writes to the example view. Restore the original placeholder
+through Ruphino when finished. Source edits survive a process restart; the
+resident's in-memory last diff does not.
 
-1. Opened the running Rails page in the browser; saw the rendered New customer heading.
-2. Opened the injected Ruphino mascot controls.
-3. Clicked the actual Name input on the Rails page.
-4. Changed its placeholder from `Full name` to `Customer full name` and clicked
-   **Apply to Rails view**.
-5. Observed browser navigation/reload and read the new placeholder from the DOM.
-6. Opened **Last Herb diff** and verified `attribute_value_changed` at path `[0,7,3,3]`.
-7. Read the real file and resident state; reparsed the saved ERB with Herb.
+## What this milestone establishes
 
-Recorded first mutation revisions:
+Browser action → structured mutation → Herb selection → deterministic ERB edit
+→ reparse and postcondition → Herb diff → source write → Rails reload.
 
-- Before: `051634150fcd28a58895aa6e2b0409c136d80837d8c3ef165d8fca3716157f94`
-- After: `5a9aea1a4bef208ac98633727c64188adf66d90fa87a184fbbea5480101398a4`
-
-These are source hashes, not Git commits. The observed diff is produced by
-`Herb.diff`, not a text diff. AST paths are retained as evidence only.
-
-### Scope and limitations
-
-No AI generation, React, component DSL, ViewComponent, Phlex, authentication,
-packaging/publishing, production integration, generic DOM patcher or general
-render-provenance system. One fixed view and two literal IDs only. Full reload
-may lose input state. Resident history is in memory. Non-cooperating external
-editors can race the final compare/rename interval. See decisions for details.
-
-### Final restart check
-
-Stopped the supervisor gracefully and restarted with `mise run dev`; both child
-processes restarted and the Rails page loaded successfully. The existing-socket
-guard also refused an attempted second owner. Final saved source reparsed with
-Herb successfully and `git diff --check` remained clean. The resident's last diff
-correctly resets on restart; source edits persist on disk.
-
-A later Email placeholder value `name@example.com!` was observed and preserved;
-the first mutation hashes above remain historical evidence, not a claim about
-the final file hash. The demo is left running for inspection. Work is local on
-`feature/herb-rad-poc`; no commit, push, or upstream issue was created.
-
-### Follow-up: remove obsolete desktop remnants
-
-Removed the unused root mascot copy (SHA-256 matched the active gem asset), empty desktop directories and old
-frontend/desktop ignore rules. Documented the companion's original guided
-Ruby/Rails setup purpose without selecting another desktop framework.
-Historical research remains as an audit record.
-
-Verification: `mise run test` passed again (17 runs, 50 assertions); `git diff
---check` passed. Searches found no Glimmer/JRuby/SWT/Tauri/Wails/qdns or removed
-asset/entry-point references in active code, dependencies or mise configuration.
-`git check-ignore` confirms local gems, caches and runtime sockets remain ignored.
+This proof covers one fixed view and two literal inputs. It does not establish
+partial discovery, general DOM-to-source mapping, undo or arbitrary visual
+editing. Reload can lose form state, and an external editor can still race the
+final source comparison and rename. See [decisions](decisions.md) for boundaries
+and [Herb research](herb-research.md) for the API evidence.

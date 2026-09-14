@@ -1,25 +1,12 @@
 # Ruphy Studio decisions
 
-## 2026-09-14 — Repository and branch
-
-Repository: `https://github.com/michael-lins/ruphy-studio`. Work proceeds on
-`feature/herb-rad-poc`, based on main `b333b47`. See `docs/history.md` for the
-historical/POC branch inspection completed before coding.
-
-The old JRuby/Glimmer/SWT entry points and obsolete desktop task list are removed
-from this branch. Only the mascot image is reused. Old POCs remain in Git history.
-
-### Follow-up cleanup
-
-Removed the unused root `icons/ruphino.png` duplicate after verifying it is byte-identical
-to the active asset in `gems/ruphy/lib/ruphy/assets/`. Removed empty desktop
-directories and obsolete frontend/desktop build ignore rules. Retained the
-historical inspection notes as the record requested for this experiment.
+## Scope — 2026-09-14
 
 The desktop companion originally aimed to guide developers through Ruby/Rails
-setup, similar to a traditional installation wizard. Preserve that product intent
-without preserving the Glimmer implementation. No replacement desktop framework
+setup, similar to a traditional installation wizard. The current design keeps that
+product intent without retaining the Glimmer implementation. No desktop framework
 or installer is selected in this POC; mise handles its current development setup.
+See [earlier experiments](history.md) for the architectural background.
 
 ## Rails page, gem, resident
 
@@ -53,11 +40,12 @@ the development mutation endpoint; there is no authentication subsystem.
 Inspected main: `d36f73737f43b7306f561efa32283b89e3b39c6f`.
 Executed version: official `herb` 0.10.3 arm64-darwin gem, with libherb 0.10.3 and
 libprism 1.9.0. Using a pinned release avoids making main's unreleased APIs a
-runtime requirement. Parsing, AST traversal/locations and `Herb.diff` were probed
-against that installed release before implementation.
+runtime requirement. The installed release's parsing, AST traversal/locations and
+`Herb.diff` were verified in the [first milestone](progress.md). Pinned source
+references are in [Herb research](herb-research.md).
 
 Herb provides supported TypeScript rewriting backed by IdentityPrinter. No
-corresponding Ruby source-rewriter/identity-printer API was found. The allowed
+corresponding Ruby source-rewriter/identity-printer API was found. The selected
 fallback edits only the inner range of a structurally selected, quoted,
 literal placeholder. Herb character positions are converted to Ruby UTF-8
 character offsets; unrelated bytes, line endings and quote style are preserved.
@@ -85,13 +73,10 @@ a single fixed view. Static graph completeness is not general runtime provenance
 
 ## Tooling
 
-Per the user's instruction, `mise.toml` manages Ruby 3.4.9 and setup/test/dev tasks.
-It replaces the prior JRuby and qdns entries. Rails 8.1.3 railties/actionpack and
-Puma 7.0.4 use the existing environment; Herb 0.10.3 is the explicitly requested
-new direct dependency. Bundler installs required transitive/default-gem copies as
-needed in the local cache. No additional architectural dependency was introduced.
-The toy app uses Rails-specific defaults; core source mutation code has no Rails
-API dependency.
+`mise.toml` pins Ruby 3.4.9 and provides setup/test/dev tasks. The bundle pins
+Rails 8.1.3 railties/actionpack, Puma 7.0.4 and Herb 0.10.3 for reproducibility.
+Gems and caches stay in ignored local directories. The toy app uses Rails-specific
+defaults; core source mutation code has no Rails API dependency.
 
 ## Candidate upstream Herb contribution
 
