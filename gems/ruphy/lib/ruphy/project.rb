@@ -3,14 +3,15 @@ require "digest"
 require "cgi"
 require "tempfile"
 require "thread"
+require "securerandom"
 
 module Ruphy
   class Error < StandardError; end
   class Conflict < Error; end
 
-  # One view, two literal HTML inputs, one operation. No Rails dependency.
+  # One explicitly configured partial, two literal inputs. No Rails dependency.
   class Project
-    VIEW = "app/views/customers/new.html.erb"
+    VIEW = "app/views/customers/_form.html.erb"
     TARGETS = %w[customer_name customer_email].freeze
 
     def initialize(root)
@@ -18,6 +19,7 @@ module Ruphy
       @path = File.join(@root, VIEW)
       @mutex = Mutex.new
       @last_change = nil
+      @undo = nil
     end
 
     def state
@@ -28,12 +30,16 @@ module Ruphy
           value = target_value(tree, id)
           { id: id, placeholder: CGI.unescapeHTML(inner_source(source, value)) }
         end
-        { revision: revision(source), view: VIEW, fields: fields, last_change: @last_change }
+        undo = if @undo && @undo[:after] == revision(source)
+          { change_id: @undo[:change_id], target: @undo[:target] }
+        end
+        { revision: revision(source), view: VIEW, fields: fields, last_change: @last_change, undo: undo }
       end
     end
 
     def mutate(command)
       @mutex.synchronize do
+        return undo(command) if command.is_a?(Hash) && command["operation"] == "undo"
         raise Error, "Unsupported mutation" unless command.is_a?(Hash) &&
           command.keys.sort == %w[operation revision target value] &&
           command["operation"] == "set_placeholder"
@@ -60,17 +66,45 @@ module Ruphy
           raise Error, "Unexpected structural diff"
         end
         raise Conflict, "View changed during validation" unless read_source == original
-        write_source(candidate, original) unless original == candidate
-        @last_change = {
+        change = {
           operation: "set_placeholder", target: id,
           before: revision(original), after: revision(candidate),
           diff: { identical: diff.identical?, operations: operations }
         }
-        { revision: revision(candidate), reload: original != candidate, change: @last_change }
+        unless original == candidate
+          write_source(candidate, original)
+          @undo = { source: original, after: revision(candidate), target: id, change_id: SecureRandom.uuid }
+          @last_change = change
+        end
+        { revision: revision(candidate), reload: original != candidate, change: change }
       end
     end
 
     private
+
+    # Called under the same mutex as edits; source snapshots never leave the resident.
+    def undo(command)
+      raise Error, "Unsupported undo" unless command.keys.sort == %w[change_id operation revision]
+      raise Error, "Nothing to undo" unless @undo
+      current = read_source
+      unless command["change_id"] == @undo[:change_id] && command["revision"] == revision(current) &&
+          revision(current) == @undo[:after]
+        raise Conflict, "Undo no longer matches the latest edit; reload the page"
+      end
+      original = @undo[:source]
+      target_value(parse(current), @undo[:target])
+      target_value(parse(original), @undo[:target])
+      diff = Herb.diff(current, original)
+      operations = diff.operations.map { |op| { type: op.type.to_s, path: op.path } }
+      raise Error, "Unexpected undo diff" unless operations.map { |op| op[:type] } == ["attribute_value_changed"]
+      write_source(original, current)
+      @last_change = {
+        operation: "undo", target: @undo[:target], before: revision(current), after: revision(original),
+        diff: { identical: diff.identical?, operations: operations }
+      }
+      @undo = nil
+      { revision: revision(original), reload: true, change: @last_change }
+    end
 
     def read_source
       raise Error, "View must be a regular file inside the project" unless

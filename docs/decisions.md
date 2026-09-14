@@ -10,26 +10,35 @@ See [earlier experiments](history.md) for the architectural background.
 
 ## Rails page, gem, resident
 
-The Customer page is an actual Rails-rendered view with an ERB heading and literal
-name/email inputs. No separate designer canvas, database, or component model.
+The Customer page is an actual Rails-rendered view with an ERB heading. Its literal
+name/email inputs live in `_form.html.erb`, rendered once through Rails' normal
+partial rendering. No separate designer canvas, database, or component model.
 
 A local path gem installs a Railtie middleware only in development. It injects
 Ruphino into the HTML response; it does not rewrite application layouts or
 routes. JavaScript and mascot assets are served by the gem. Browser controls use
 plain JavaScript and a shadow root for style isolation.
 
-A separate Ruby process owns the fixed view, revision checks, mutation ordering
+A separate Ruby process owns the configured partial, revision checks, mutation ordering
 and last diff. The Rails adapter forwards bounded JSON messages over a local
 Unix socket. No extra HTTP/WebSocket framework or Node runtime is needed. The
 transport currently targets macOS/Linux. This is a deliberate local POC limit.
 
-## One mutation and explicit target identity
+## Partial editing and explicit target identity
 
 `set_placeholder` accepts only target, value, operation and revision. Targets are
-`customer_name` and `customer_email` in one server-owned view path. HTML IDs are
+`customer_name` and `customer_email` in the server-owned path
+`app/views/customers/_form.html.erb`. HTML IDs are
 explicit POC source-to-DOM identity; there is no claim of general render
 provenance. Repeated/conditional targets, dynamic attributes and unsupported
 source structures are rejected. Values are escaped as HTML text before insertion.
+
+The partial path is explicitly configured in `Project::VIEW`; Rails renders it
+from `new.html.erb`. Edits leave the calling view untouched. This demonstrates
+editing across a real render boundary, not automatic partial discovery. The
+caller and layout are not revision-tracked, and repeated rendering or conditional
+render calls are outside this milestone. Structural rejection applies to nodes
+inside the configured partial, not arbitrary callers.
 
 The browser keeps the source revision captured before the Rails render. A stale
 page cannot silently retarget a newer file. Local, same-origin JSON checks guard
@@ -69,7 +78,25 @@ on process restart.
 Herb AST paths are not interpreted as DOM paths. Current Herb browser patching
 uses runtime/compiler metadata, regions and slots. No ReActionView or renderer
 replacement is introduced. Render-graph APIs were inspected but are deferred for
-a single fixed view. Static graph completeness is not general runtime provenance.
+a single configured partial. Static graph completeness is not general runtime provenance.
+
+## One-level undo
+
+After a successful source-changing edit, the resident holds the original source,
+the resulting revision, target and a unique change ID. The browser receives only
+undo metadata; it cannot submit replacement source. An `undo` command must match
+the current revision, the saved post-edit revision and the latest change ID.
+
+Undo reparses both sources, checks the target, computes the reverse Herb diff,
+and uses the same source comparison and atomic write as editing. It restores
+exact original bytes, including entities, quotes and line endings, then reloads
+Rails. External changes and stale browser commands are rejected. The final
+compare/rename race described above also applies to undo.
+
+Only the latest edit is retained. Undo consumes that entry; there is no redo or
+multi-level history. No-op and rejected edits leave the entry intact. Restarting
+the resident clears it. State exposes undo only while the current source matches
+the saved result. This is content-based protection, not an external-edit journal.
 
 ## Tooling
 

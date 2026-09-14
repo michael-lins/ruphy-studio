@@ -16,8 +16,9 @@
       p { color: #627167; }
       label { display: block; margin: 16px 0 6px; font-weight: 600; }
       input { width: 100%; padding: 10px; border: 1px solid #b4c2b7; border-radius: 6px; }
-      #apply { width: 100%; margin-top: 12px; padding: 10px; background: #276044; color: white; border: 0; border-radius: 6px; cursor: pointer; }
-      #apply:disabled { opacity: .45; cursor: default; }
+      #apply, #undo { width: 100%; margin-top: 12px; padding: 10px; background: #276044; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+      #undo { background: #edf2ee; color: #276044; }
+      #apply:disabled, #undo:disabled { opacity: .45; cursor: default; }
       output { display: block; margin-top: 12px; overflow-wrap: anywhere; }
       details { margin-top: 12px; font-size: 12px; }
       pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 160px; overflow: auto; }
@@ -31,6 +32,7 @@
         <input id="placeholder" name="placeholder" maxlength="200" disabled>
         <button id="apply" disabled>Apply to Rails view</button>
       </form>
+      <button id="undo" type="button" disabled>Undo last edit</button>
       <output role="status">Choose a field</output>
       <details hidden><summary>Last Herb diff</summary><pre></pre></details>
     </section>
@@ -40,19 +42,27 @@
   const mascot = root.querySelector('#mascot');
   const input = root.querySelector('input');
   const apply = root.querySelector('#apply');
+  const undo = root.querySelector('#undo');
   const status = root.querySelector('output');
   let selected = null;
   let busy = false;
+  const updateButtons = () => {
+    apply.disabled = busy || !selected;
+    undo.disabled = busy || !snapshot.ok || !snapshot.result.undo;
+  };
   const showChange = (change) => {
     root.querySelector('details').hidden = false;
     root.querySelector('pre').textContent = JSON.stringify(change.diff, null, 2);
   };
   if (snapshot.ok && snapshot.result.last_change) {
     showChange(snapshot.result.last_change);
-    status.textContent = 'View saved and reloaded. Choose a field to continue.';
+    status.textContent = snapshot.result.last_change.operation === 'undo'
+      ? 'Last edit undone. Original source restored.'
+      : 'View saved and reloaded. Choose a field to continue.';
   } else if (!snapshot.ok) {
     status.textContent = snapshot.error;
   }
+  updateButtons();
   mascot.addEventListener('click', () => {
     panel.hidden = !panel.hidden;
     mascot.setAttribute('aria-expanded', String(!panel.hidden));
@@ -64,24 +74,20 @@
     selected = field;
     input.disabled = false;
     input.value = field.placeholder;
-    apply.disabled = false;
+    updateButtons();
     status.textContent = `Selected ${event.target.labels?.[0]?.textContent || field.id}`;
     input.focus();
   });
-  root.querySelector('form').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!selected || busy) return;
+  const sendMutation = async (command) => {
+    if (busy) return;
     busy = true;
-    apply.disabled = true;
-    status.textContent = 'Validating and saving…';
+    updateButtons();
+    status.textContent = command.operation === 'undo' ? 'Validating and undoing…' : 'Validating and saving…';
     try {
       const response = await fetch('/__ruphy/mutations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operation: 'set_placeholder', target: selected.id,
-          value: input.value, revision: snapshot.result.revision,
-        }),
+        body: JSON.stringify(command),
       });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || 'Mutation failed');
@@ -92,7 +98,20 @@
       status.textContent = error.message;
     } finally {
       busy = false;
-      apply.disabled = false;
+      updateButtons();
     }
+  };
+  root.querySelector('form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!selected) return;
+    sendMutation({
+      operation: 'set_placeholder', target: selected.id,
+      value: input.value, revision: snapshot.result.revision,
+    });
+  });
+  undo.addEventListener('click', () => {
+    if (!snapshot.ok || !snapshot.result.undo) return;
+    sendMutation({ operation: 'undo', revision: snapshot.result.revision,
+      change_id: snapshot.result.undo.change_id });
   });
 })();

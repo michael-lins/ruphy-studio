@@ -1,5 +1,30 @@
 # Milestones and verification
 
+## Partial editing and one-level undo — completed 2026-09-14
+
+The Customer page now renders `customers/_form.html.erb`. The resident targets
+that explicitly configured partial and leaves its caller untouched. The latest
+successful edit can be undone through Ruphino if source revision and change ID
+still match. No automatic discovery, multi-level history or redo is implemented.
+
+Verification on the environment recorded below:
+
+- Test-first partial increment: two expected failures, then 19 tests / 59 assertions passed.
+- Test-first undo increment: five expected missing-undo errors, then passing tests;
+  final suite including socket undo: **24 tests / 86 assertions, no failures, errors or skips**.
+- Tests verify exact undo bytes (including Unicode and CRLF), file mode, reverse
+  Herb diff, consumed history, stale IDs, external source edits, latest-only undo,
+  no-op/failure preservation and restart behavior. A separate resident handles
+  both edit and undo through the same mutation transport.
+- Browser: selected Name, changed its placeholder to `Full name from partial`,
+  observed reload and `attribute_value_changed`, then clicked **Undo last edit**.
+  The original placeholder returned, undo became disabled, and no console errors
+  were reported. Byte comparisons confirmed that the partial was restored exactly
+  and the caller stayed unchanged throughout.
+
+These results extend the first proof below. Undo shares the existing final
+compare/rename race limitation; see [decisions](decisions.md#one-level-undo).
+
 ## First Rails/Herb editing loop — completed 2026-09-14
 
 Implemented in commit `6bad733`. The actual Rails page is the canvas; a
@@ -46,24 +71,29 @@ a separate resident process, and Rails boots in development, test and production
 4. Confirm that the page reloads and the field displays the new placeholder.
 5. Open **Last Herb diff**: expect one `attribute_value_changed` operation. Its
    AST path depends on source structure; it is not a stable DOM identifier.
-6. Inspect `examples/customer/app/views/customers/new.html.erb`: only the selected
+6. Inspect `examples/customer/app/views/customers/_form.html.erb`: only the selected
    placeholder's contents should change. Confirm the saved file parses:
 
 ```sh
-mise exec -- bundle exec ruby -rherb -e 'result = Herb.parse(File.read("examples/customer/app/views/customers/new.html.erb")); abort result.errors.map(&:message).join("\n") unless result.errors.empty?; puts "ERB valid"'
+mise exec -- bundle exec ruby -rherb -e 'result = Herb.parse(File.read("examples/customer/app/views/customers/_form.html.erb")); abort result.errors.map(&:message).join("\n") unless result.errors.empty?; puts "ERB valid"'
 ```
 
-This exercise writes to the example view. Restore the original placeholder
-through Ruphino when finished. Source edits survive a process restart; the
-resident's in-memory last diff does not.
+7. Click **Undo last edit** in Ruphino. Confirm reload, the original placeholder,
+   a reverse `attribute_value_changed` diff and a disabled Undo button.
+8. Compare the partial with its starting contents and confirm `new.html.erb` is
+   unchanged. Automated tests additionally assert byte-for-byte restoration.
 
-## What this milestone establishes
+This exercise writes to the example partial. Undo before restarting the resident:
+source edits survive a restart, but undo history and the last diff do not.
+
+## What the first milestone established
 
 Browser action → structured mutation → Herb selection → deterministic ERB edit
 → reparse and postcondition → Herb diff → source write → Rails reload.
 
-This proof covers one fixed view and two literal inputs. It does not establish
-partial discovery, general DOM-to-source mapping, undo or arbitrary visual
-editing. Reload can lose form state, and an external editor can still race the
+The first milestone covered one fixed view and two literal inputs. It did not
+establish partial editing, general DOM-to-source mapping, undo or arbitrary visual
+editing. Partial editing and undo are covered by the later milestone above;
+automatic discovery remains unsupported. Reload can lose form state, and an external editor can still race the
 final source comparison and rename. See [decisions](decisions.md) for boundaries
 and [Herb research](herb-research.md) for the API evidence.

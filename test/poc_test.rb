@@ -36,6 +36,17 @@ class ProjectTest < Minitest::Test
     assert Herb.parse(File.read(@path)).errors.empty?
   end
 
+  def test_edit_targets_the_configured_partial_and_preserves_its_caller
+    assert_equal "app/views/customers/_form.html.erb", Ruphy::Project::VIEW
+    caller_path = File.join(@root, "app/views/customers/new.html.erb")
+    caller_source = '<main><%= render "form" %></main>'
+    File.write(caller_path, caller_source)
+    @project.mutate(command)
+    assert_equal caller_source, File.read(caller_path)
+    assert_equal "app/views/customers/_form.html.erb", @project.state[:view]
+    assert_includes File.read(@path), "Nome completo"
+  end
+
   def test_unicode_on_same_line_and_markup_is_literal
     File.write(@path, @source.delete("\r\n"))
     before = File.read(@path)
@@ -115,6 +126,75 @@ class ProjectTest < Minitest::Test
     File.write(@path, @source.sub("placeholder='Full name'", ""))
     assert_raises(Ruphy::Error) { @project.mutate(command) }
   end
+
+  def undo_command
+    state = @project.state
+    { "operation" => "undo", "revision" => state[:revision],
+      "change_id" => state.fetch(:undo).fetch(:change_id) }
+  end
+
+  def test_undo_restores_exact_source_with_reverse_herb_diff
+    File.chmod(0o640, @path)
+    @project.mutate(command(%q{O'Neil & 🌿}))
+    edit = undo_command
+    result = @project.mutate(edit)
+    assert_equal @source.b, File.binread(@path)
+    assert_equal 0o640, File.stat(@path).mode & 0o777
+    assert_equal "undo", result[:change][:operation]
+    assert_equal ["attribute_value_changed"], result[:change][:diff][:operations].map { |op| op[:type] }
+    assert result[:reload]
+    assert_nil @project.state[:undo]
+    assert_raises(Ruphy::Error) { @project.mutate(edit) }
+  end
+
+  def test_undo_rejects_external_edits_even_with_a_fresh_revision
+    @project.mutate(command)
+    edit = undo_command
+    external = File.read(@path) + "<!-- keep external -->"
+    File.write(@path, external)
+    assert_nil @project.state[:undo]
+    assert_raises(Ruphy::Conflict) { @project.mutate(edit) }
+    edit["revision"] = Digest::SHA256.hexdigest(external)
+    assert_raises(Ruphy::Conflict) { @project.mutate(edit) }
+    assert_equal external, File.read(@path)
+  end
+
+  def test_only_latest_edit_is_undoable_and_old_tokens_are_rejected
+    @project.mutate(command("First"))
+    first_source = File.binread(@path)
+    old = undo_command
+    @project.mutate(command("Second"))
+    latest = undo_command
+    assert_raises(Ruphy::Conflict) { @project.mutate(old.merge("revision" => latest["revision"])) }
+    @project.mutate(latest)
+    assert_equal first_source, File.binread(@path)
+    assert_nil @project.state[:undo]
+  end
+
+  def test_noop_and_rejected_edits_preserve_undo_and_restart_clears_it
+    assert_nil @project.state[:undo]
+    @project.mutate(command("First"))
+    previous = @project.state[:undo]
+    @project.mutate(command("First"))
+    assert_equal previous, @project.state[:undo]
+    assert_raises(Ruphy::Error) { @project.mutate(command("\0")) }
+    assert_equal previous, @project.state[:undo]
+    assert_nil Ruphy::Project.new(@root).state[:undo]
+    @project.mutate(undo_command)
+    assert_equal @source.b, File.binread(@path)
+  end
+
+  def test_undo_rechecks_source_after_validation
+    @project.mutate(command)
+    edit = undo_command
+    @project.define_singleton_method(:parse) do |source|
+      result = super(source)
+      File.write(@path, source + "<!-- intervening -->")
+      result
+    end
+    assert_raises(Ruphy::Conflict) { @project.mutate(edit) }
+    assert File.read(@path).end_with?("<!-- intervening -->")
+  end
 end
 
 class ResidentTest < Minitest::Test
@@ -139,6 +219,13 @@ class ResidentTest < Minitest::Test
     assert_equal 1, results.count { |result| result["status"] == 409 }
     assert_includes File.read(path), 'placeholder="New name"'
     assert_equal "attribute_value_changed", client.call("state")["result"]["last_change"]["diff"]["operations"].first["type"]
+    state = client.call("state")["result"]
+    undo = { "operation" => "undo", "revision" => state["revision"], "change_id" => state["undo"]["change_id"] }
+    result = client.call("mutate", undo)
+    assert result["ok"]
+    assert_equal "undo", result["result"]["change"]["operation"]
+    assert_includes File.read(path), 'placeholder="Name"'
+    refute client.call("mutate", undo)["ok"]
   ensure
     if pid
       Process.kill("TERM", pid)
@@ -149,6 +236,19 @@ class ResidentTest < Minitest::Test
 end
 
 class EnvironmentTest < Minitest::Test
+  def test_customer_page_renders_the_real_form_partial
+    script = <<~RUBY
+      require_relative "examples/customer/config/environment"
+      html = CustomersController.render(:new, assigns: { heading: "Partial proof" })
+      abort "Partial was not rendered" unless html.include?('id="customer_name"') && html.include?('id="customer_email"')
+      puts "rendered"
+    RUBY
+    assert_includes File.read("examples/customer/app/views/customers/new.html.erb"), '<%= render "form" %>'
+    output, errors, status = Open3.capture3({ "RAILS_ENV" => "test" }, RbConfig.ruby, "-e", script)
+    assert status.success?, errors
+    assert_equal "rendered", output.lines.last.strip
+  end
+
   def test_railtie_only_installs_in_development
     %w[development test production].each do |environment|
       script = 'require_relative "examples/customer/config/environment"; puts Rails.application.middleware.any? { |m| m.klass.name == "Ruphy::Middleware" }'
