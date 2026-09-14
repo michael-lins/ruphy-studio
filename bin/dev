@@ -1,0 +1,33 @@
+require "bundler/setup"
+require "fileutils"
+require "socket"
+require "rbconfig"
+
+root = File.expand_path("..", __dir__)
+app = File.join(root, "examples/customer")
+socket = ENV.fetch("RUPHY_SOCKET", File.join(app, "tmp/ruphy.sock"))
+FileUtils.mkdir_p(File.dirname(socket))
+abort "Socket already exists: #{socket}. Stop its owner before starting another resident." if File.exist?(socket)
+pids = []
+begin
+  pids << Process.spawn({ "RUPHY_SOCKET" => socket }, RbConfig.ruby, File.join(root, "bin/resident"))
+  ready = false
+  100.times do
+    begin
+      UNIXSocket.open(socket, &:close)
+      ready = true
+      break
+    rescue Errno::ENOENT, Errno::ECONNREFUSED
+      sleep 0.05
+    end
+  end
+  abort "Resident did not start" unless ready
+  pids << Process.spawn({ "RAILS_ENV" => "development", "RUPHY_SOCKET" => socket },
+    RbConfig.ruby, Gem.bin_path("puma", "puma"), "-b", "tcp://127.0.0.1:#{ENV.fetch('PORT', '3000')}",
+    File.join(app, "config.ru"), chdir: root)
+  %w[INT TERM].each { |signal| trap(signal) { exit } }
+  Process.wait
+ensure
+  pids.each { |pid| Process.kill("TERM", pid) rescue Errno::ESRCH }
+  pids.each { |pid| Process.wait(pid) rescue Errno::ECHILD }
+end

@@ -1,10 +1,11 @@
 # Ruphy Studio ™
-![Ruphy's maskot: ruphino!](/icons/ruphino.png)
----
+
+<img src="gems/ruphy/lib/ruphy/assets/ruphino.png" alt="Ruphino, Ruphy's mascot and development companion" width="96">
 
 > _Drag and Drop your Rails project from Idea to IPO_
 
-Ruphy Studio ™ is a Rapid Application Development (RAD) platform for Ruby on Rails with a Delphi-inspired experience.
+Ruphy Studio is a Rapid Application Development (RAD) project for Ruby on Rails
+with a Delphi-inspired experience.
 
 It is my love letter to my 20-years-ago self.
 
@@ -12,99 +13,88 @@ It is my love letter to my 20-years-ago self.
 
 > _Keep the wheel running from a new perspective — not reinventing it._
 
-Ruphy Studio aims to:
+Ruphy aims to make building Rails applications visual and approachable while
+keeping real Rails applications and source code at the center of the workflow.
 
-- Create Rails applications from scratch
-- Attach them to remote Git repositories
-- Provide a Drag & Drop WYSIWYG experience, powered by [Hotwire](https://hotwire.dev) and ready to be deployed to remote servers using [Kamal](https://kamal-deploy.org)
-- Use a seamless UI component system, RuphyCL, powered by [Css-Zero](https://csszero.lazaronixon.com) and later on [Ruby UI](https://github.com/ruby-ui/ruby_ui) [components](https://rubyui.com/docs/introduction)
-- Stay 100% Rails-compatible
-- Support remote deployment via Kamal (through a remote deployer)
+- Guide developers through Ruby/Rails setup, with the simplicity of an old-fashioned installation wizard.
+- Support visual, drag-and-drop development on the actual running Rails page.
+- Stay compatible with standard Rails workflows and editable application source.
 
-The goal is not to replace Rails —  
-it is to elevate the Rails experience.
+These are product goals. The current experiment proves one small editing loop.
+For now, mise provides the reproducible development setup; a desktop installer
+is outside this proof.
 
----
+## Current experiment
 
-## Architecture (Current POC State)
+The running Rails page is the visual canvas, and Herb provides structural
+understanding of its ERB source. Ruphino is Ruphy's mascot and in-browser
+development companion.
 
-Ruphy Studio is a hybrid Desktop/Web application:
+Open Ruphino, click a Customer form field, and change its placeholder. The
+development-only Ruphy gem sends a structured mutation to a resident Ruby
+process. Herb locates the input in the real ERB, validates the candidate, and
+computes its structural diff. The file is saved and Rails reloads in the browser.
+The form lives in a real Rails partial. **Undo last edit** restores its exact
+previous source, provided the partial still matches the latest successful edit.
 
-- Desktop shell powered by Glimmer DSL for SWT
-- Running on **JRuby**
-- Generates real **Rails 7.1.x** applications
-- Uses JDBC adapters for cross-platform SQLite support
-- Designed to deploy via MRI + Kamal (remote deployer model)
+## Run
 
-### Runtime Strategy
+Ruby and tooling are managed by [mise](https://mise.jdx.dev/). The experiment pins
+Ruby 3.4.9, Rails 8.1.3's railties/actionpack, Puma 7.0.4 and Herb 0.10.3.
+Gems and gem caches stay inside the ignored `vendor/` directories.
 
-**Local Development**
-- JRuby 9.4.x
-- Rails 7.1.x
-- `activerecord-jdbcsqlite3-adapter`
-- No native compilation required
-- Cross-platform: macOS / Linux / Windows
-
-**Deployment**
-- MRI Ruby
-- Standard `sqlite3` gem
-- Kamal executed remotely
-
-This keeps development friction-free while preserving production compatibility.
-
----
-
-## Rails Seed Project Design
-
-Generated Rails apps:
-
-- Rails 7.1.x
-- SQLite database
-- JDBC adapter under JRuby
-- Native `sqlite3` under MRI
-- No Docker
-- No local Kamal dependency
-
-The project remains fully compatible with standard Rails workflows.
-
----
-
-## Install
-
-### Install mise
-
-https://github.com/jdx/mise
-
----
-
-### Install Java (JDK recommended)
-
-https://openjdk.org/install/
-
-JRuby requires a working Java runtime.
-
----
-
-### Install Toolchain
-
-From project root:
-
-```bash
+```sh
+mise trust
 mise install
+mise run setup
+mise run test
+mise run dev
 ```
 
-### Install ruby gems (using jruby)
-```bash
-jruby -S bundle install
-```
+Visit http://127.0.0.1:3000. Click the Ruphino mascot at bottom right, then click
+Name or Email in the actual Rails form. Enter a placeholder and click **Apply to
+Rails view**. After reload, open Ruphino to inspect **Last Herb diff**, or click
+**Undo last edit** to restore the previous placeholder and reload again.
 
-## Run the development version
+`mise run dev` starts and supervises both the resident process and Rails. Ctrl-C
+stops both. Use `PORT=3001 mise run dev` to choose another Rails port. A second
+resident for the same socket is refused. If a hard kill leaves
+`examples/customer/tmp/ruphy.sock`, verify its owner is gone before removing it.
 
-### Run it locally
-```bash
-jruby app/main.rb
-```
-## Build the distribution version
+## Code map
 
-### Build it using Glimmer
+- `examples/customer/`: tiny Rails app; no database or asset pipeline.
+- `gems/ruphy/lib/ruphy.rb`: development-only Railtie injection.
+- `gems/ruphy/lib/ruphy/assets/ruphino.js`: browser controls over the live page.
+- `gems/ruphy/lib/ruphy/project.rb`: Herb traversal, range edit, validation, diff and write.
+- `gems/ruphy/lib/ruphy/resident.rb`: resident owner, JSON over a local Unix socket.
+- `test/poc_test.rb`: source preservation, rejection cases and middleware tests.
 
+The editable source is `examples/customer/app/views/customers/_form.html.erb`,
+rendered once by `new.html.erb`. The resident explicitly configures that partial;
+it does not discover render targets. Supported operations are `set_placeholder`
+on its two uniquely identified literal inputs and `undo` for the latest edit.
+The gem loads through a local path in the development group; no gem
+publication or packaging workflow is involved.
+
+## Boundaries
+
+Herb main was inspected separately from the pinned released gem running this
+proof. Ruby exposes parsing and diffing; its source-location edit fallback is
+used because no equivalent of Herb's TypeScript rewriter was found in Ruby.
+
+The browser reloads; it does not apply Herb AST paths directly to the DOM. Input
+state can be lost on reload. Dynamic attributes, repeated/conditional inputs,
+arbitrary views and mutations are unsupported. Undo is one level, has no redo,
+and is cleared when the resident restarts. No-op and failed edits preserve the
+previous undo. Stale revisions or change IDs are rejected, including undo after
+an external source change. An unavailable resident leaves
+Rails usable and displays an error in Ruphino.
+
+The socket transport targets local macOS/Linux development. The resident rejects
+stale revisions and checks the source before an atomic rename; an external editor
+that writes in the final check-to-rename interval is still a race. This is a
+single-owner POC, not a general collaborative editor.
+
+See [decisions](docs/decisions.md), [verification results](docs/progress.md),
+[Herb source research](docs/herb-research.md), and [historical POCs](docs/history.md).
