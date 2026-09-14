@@ -1,5 +1,14 @@
 # Ruphy Studio progress
 
+## README identity and vision
+
+Reused main's Ruphino mascot, Idea-to-IPO tagline, Delphi inspiration, personal
+origin story and guiding quote. The README separates long-term product goals
+from the current Rails/Herb proof. Its image references the existing gem asset;
+no duplicate image or legacy runtime instructions were restored. Documentation
+verification: checked the asset path and reviewed the diff; `git diff --check`
+passed. No application code changed or application tests rerun for this edit.
+
 ## 2026-09-14 — Completed first end-to-end proof
 
 Branch: `feature/herb-rad-poc`, based on main `b333b47`.

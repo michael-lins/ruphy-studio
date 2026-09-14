@@ -1,17 +1,39 @@
-# Ruphy Studio
+# Ruphy Studio ™
 
-A small Herb-based RAD experiment: the running Rails page is the visual canvas.
+<img src="gems/ruphy/lib/ruphy/assets/ruphino.png" alt="Ruphino, Ruphy's mascot and development companion" width="96">
+
+> _Drag and Drop your Rails project from Idea to IPO_
+
+Ruphy Studio is a Rapid Application Development (RAD) project for Ruby on Rails
+with a Delphi-inspired experience.
+
+It is my love letter to my 20-years-ago self.
+
+## Vision
+
+> _Keep the wheel running from a new perspective — not reinventing it._
+
+Ruphy aims to make building Rails applications visual and approachable while
+keeping real Rails applications and source code at the center of the workflow.
+
+- Guide developers through Ruby/Rails setup, with the simplicity of an old-fashioned installation wizard.
+- Support visual, drag-and-drop development on the actual running Rails page.
+- Stay compatible with standard Rails workflows and editable application source.
+
+These are product goals. The current experiment proves one small editing loop.
+For now, mise provides the reproducible development setup; a desktop installer
+is outside this proof.
+
+## Current experiment
+
+The running Rails page is the visual canvas, and Herb provides structural
+understanding of its ERB source. Ruphino is Ruphy's mascot and in-browser
+development companion.
 
 Open Ruphino, click a Customer form field, and change its placeholder. The
 development-only Ruphy gem sends a structured mutation to a resident Ruby
 process. Herb locates the input in the real ERB, validates the candidate, and
 computes its structural diff. The file is saved and Rails reloads in the browser.
-
-Ruphy's broader aim is a straightforward Ruby/Rails development experience,
-including guided setup like the installation wizards of earlier desktop tools.
-The original desktop companion explored that onboarding role using Glimmer.
-That goal remains relevant; a desktop toolkit or installer is not part of this
-Rails/Herb proof. For now, mise provides the reproducible development setup.
 
 ## Run
 
