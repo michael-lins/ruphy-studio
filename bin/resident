@@ -1,0 +1,7 @@
+require "bundler/setup"
+require "ruphy/resident"
+root = File.expand_path("../examples/customer", __dir__)
+socket = ENV.fetch("RUPHY_SOCKET", File.join(root, "tmp/ruphy.sock"))
+trap("TERM") { exit }
+trap("INT") { exit }
+Ruphy::Resident.new(root, socket).run

@@ -1,3 +1,16 @@
 [tools]
-qdns = "latest"
-ruby = "jruby-9.4.13.0"
+ruby = "3.4.9"
+
+[env]
+GEM_HOME = "{{config_root}}/vendor/gems"
+GEM_SPEC_CACHE = "{{config_root}}/vendor/gem-specs"
+BUNDLE_USER_HOME = "{{config_root}}/.bundle"
+
+[tasks.setup]
+run = "bundle install"
+
+[tasks.dev]
+run = "bundle exec ruby bin/dev"
+
+[tasks.test]
+run = "bundle exec ruby -Itest test/poc_test.rb"

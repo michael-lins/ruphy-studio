@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Customer · Ruphy Studio</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #f5f3ef; color: #292e2b; font: 16px/1.5 system-ui, sans-serif; }
+      header { padding: 24px 40px; border-bottom: 1px solid #dddcd6; font-weight: 600; }
+      main { max-width: 540px; margin: 70px auto; padding: 36px; background: white; border: 1px solid #e1e3dc; border-radius: 16px; }
+      h1 { margin: 8px 0; font-size: 30px; letter-spacing: -1px; }
+      p { color: #68716b; }
+      label { display: block; margin: 24px 0 6px; font-weight: 600; }
+      input { width: 100%; padding: 13px; border: 1px solid #c9d0ca; border-radius: 7px; font: inherit; }
+      input:focus { outline: 2px solid #317c55; outline-offset: 2px; }
+      small { color: #68716b; }
+    </style>
+  </head>
+  <body>
+    <header>Ruphy Studio <small> / Customer canvas</small></header>
+    <%= yield %>
+  </body>
+</html>

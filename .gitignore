@@ -1,15 +1,14 @@
-# Logs
-logs
+# Runtime output
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+tmp/
+examples/customer/log/
 
-node_modules
-dist
-dist-ssr
+# Local Ruby dependencies and caches
+vendor/gems/
+vendor/gem-specs/
+.bundle/
+
+# Local configuration
 *.local
 
 # Editor directories and files
@@ -17,10 +16,4 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
-/app/assets/builds/*
-!/app/assets/builds/.keep
