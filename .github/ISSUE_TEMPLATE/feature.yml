@@ -1,0 +1,41 @@
+name: Feature or research spike
+description: Propose one small outcome or a bounded question to investigate.
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of work
+      options:
+        - Feature
+        - Research spike
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or research question
+      description: Who needs this and why? For a spike, state the uncertainty to resolve.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Smallest useful scope
+      description: Describe the proposed increment, its limits, and any dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable outcomes. For a spike, specify the evidence and decision it should produce.
+      placeholder: "- [ ] ..."
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How can someone demonstrate the result? Source references, tests, or browser steps are welcome.
+    validations:
+      required: true

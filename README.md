@@ -98,3 +98,10 @@ single-owner POC, not a general collaborative editor.
 
 See [decisions](docs/decisions.md), [verification results](docs/progress.md),
 [Herb source research](docs/herb-research.md), and [historical POCs](docs/history.md).
+
+## Contributing
+
+Track concrete work in [GitHub Issues](https://github.com/michael-lins/ruphy-studio/issues)
+and bring questions or early ideas to
+[Discussions](https://github.com/michael-lins/ruphy-studio/discussions).
+See [Contributing](CONTRIBUTING.md) for our small-increment workflow and verification expectations.

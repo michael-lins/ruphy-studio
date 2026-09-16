@@ -1,5 +1,23 @@
 # Milestones and verification
 
+## Contributor workflow — prepared 2026-09-16; GitHub setup pending
+
+Added bug and feature/spike issue forms, a Discussions link in the issue chooser,
+a concise PR template and CONTRIBUTING.md. The README links contributors to the
+workflow. The chosen tracking model is recorded in [decisions](decisions.md).
+
+Verification: parsed all three issue-template YAML files with mise-managed Ruby,
+checked required form fields and unique IDs, reviewed the Markdown and template
+structure against GitHub's documentation, and ran `git diff --check` successfully.
+No application code changed, so the Rails test suite was not rerun. No services
+were started.
+
+The GitHub project, milestone and four initial issues are not yet created:
+the connected browser is signed out and no authenticated CLI or connector is
+available. Issue bodies are prepared for publication after sign-in. Templates
+remain local until committed and merged into the default branch; their rendering
+in GitHub's issue chooser has not been verified.
+
 ## Partial editing and one-level undo — completed 2026-09-14
 
 The Customer page now renders `customers/_form.html.erb`. The resident targets

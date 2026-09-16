@@ -1,5 +1,20 @@
 # Ruphy Studio decisions
 
+## Work tracking — 2026-09-16
+
+GitHub Issues own the backlog, a single Ruphy Development project tracks status,
+and milestones group observable outcomes. Discussions hold open questions and
+early ideas. Repository docs retain architecture decisions and dated verification;
+they do not duplicate the issue backlog. Contributor-facing forms and the PR
+template live in `.github/`, with the shared workflow in
+[CONTRIBUTING.md](../CONTRIBUTING.md).
+
+The first planned outcome is direct editing on the running Rails page. A bounded
+Herb source-mapping spike precedes selection, contextual editing and insertion.
+These are planned increments, not changes to the current supported operations.
+Issue and PR templates become available through GitHub after they reach the
+default branch; no default-branch change is needed for this workflow.
+
 ## Scope — 2026-09-14
 
 The desktop companion originally aimed to guide developers through Ruby/Rails

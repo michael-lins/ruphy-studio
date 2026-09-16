@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a reproducible problem in Ruphy.
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Expected and actual behavior
+      description: What should happen, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include a small example or relevant ERB when useful.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Ruphy branch or commit, OS, browser, and Ruby/Rails/Herb versions if known.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting evidence
+      description: Optional logs, screenshots, or a failing test. Remove private data before posting.
