@@ -17,7 +17,8 @@ acceptance criteria and verification. A spike should name the uncertainty and
 the evidence needed to resolve it. Link prerequisites explicitly. Discuss new
 dependencies and broader architecture changes before implementing them.
 
-The **Ruphy Development** board uses these statuses:
+The [Ruphy Development board](https://github.com/users/michael-lins/projects/2)
+uses these statuses:
 
 | Status | Meaning |
 | --- | --- |
@@ -31,6 +32,12 @@ Keep one implementation issue in progress per contributor. Use milestones for
 observable outcomes, not speculative deadlines. Apply `bug`, `enhancement`,
 `documentation` or `spike` to describe work; status belongs on the board.
 Reserve `good first issue` for well-understood work with clear guidance.
+
+The first outcome is the
+[Direct editing POC milestone](https://github.com/michael-lins/ruphy-studio/milestone/1).
+Use GitHub's blocked-by relationships for prerequisites. Adding an issue to the
+board defaults it to Backlog. Moving a card to Done does not automatically close
+its issue; verify acceptance and close through the completed PR or spike review.
 
 ## Make a small change
 

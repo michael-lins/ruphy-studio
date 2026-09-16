@@ -102,6 +102,7 @@ See [decisions](docs/decisions.md), [verification results](docs/progress.md),
 ## Contributing
 
 Track concrete work in [GitHub Issues](https://github.com/michael-lins/ruphy-studio/issues)
+on the [Ruphy Development board](https://github.com/users/michael-lins/projects/2),
 and bring questions or early ideas to
 [Discussions](https://github.com/michael-lins/ruphy-studio/discussions).
 See [Contributing](CONTRIBUTING.md) for our small-increment workflow and verification expectations.

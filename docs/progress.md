@@ -1,6 +1,6 @@
 # Milestones and verification
 
-## Contributor workflow — prepared 2026-09-16; GitHub setup pending
+## Contributor workflow and GitHub tracking — 2026-09-16
 
 Added bug and feature/spike issue forms, a Discussions link in the issue chooser,
 a concise PR template and CONTRIBUTING.md. The README links contributors to the
@@ -12,11 +12,24 @@ structure against GitHub's documentation, and ran `git diff --check` successfull
 No application code changed, so the Rails test suite was not rerun. No services
 were started.
 
-The GitHub project, milestone and four initial issues are not yet created:
-the connected browser is signed out and no authenticated CLI or connector is
-available. Issue bodies are prepared for publication after sign-in. Templates
-remain local until committed and merged into the default branch; their rendering
-in GitHub's issue chooser has not been verified.
+Created the public [Ruphy Development board](https://github.com/users/michael-lins/projects/2)
+and [Direct editing POC milestone](https://github.com/michael-lins/ruphy-studio/milestone/1).
+Published four scoped issues, with native blocked-by relationships:
+[Herb source-mapping spike #33](https://github.com/michael-lins/ruphy-studio/issues/33)
+→ [selection #34](https://github.com/michael-lins/ruphy-studio/issues/34)
+→ [contextual editing #35](https://github.com/michael-lins/ruphy-studio/issues/35)
+→ [static insertion #36](https://github.com/michael-lins/ruphy-studio/issues/36).
+These links identify the setup milestone's initial tickets; their current scope
+and status live on GitHub.
+
+Browser verification confirmed the five ordered board statuses, the spike in
+Ready, three implementation issues in Backlog, public project visibility, and
+milestone/project assignments. Created the `spike` label and reused `enhancement`.
+Verified new items default to Backlog and disabled automatic issue closure when
+a card moves to Done. No application services were started.
+
+Contributor templates were committed in `e22c7cd`. They activate after reaching
+the default branch; their rendering in GitHub's issue chooser has not been verified.
 
 ## Partial editing and one-level undo — completed 2026-09-14
 

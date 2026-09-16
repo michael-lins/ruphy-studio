@@ -2,7 +2,8 @@
 
 ## Work tracking — 2026-09-16
 
-GitHub Issues own the backlog, a single Ruphy Development project tracks status,
+GitHub Issues own the backlog, the public
+[Ruphy Development project](https://github.com/users/michael-lins/projects/2) tracks status,
 and milestones group observable outcomes. Discussions hold open questions and
 early ideas. Repository docs retain architecture decisions and dated verification;
 they do not duplicate the issue backlog. Contributor-facing forms and the PR
@@ -14,6 +15,13 @@ Herb source-mapping spike precedes selection, contextual editing and insertion.
 These are planned increments, not changes to the current supported operations.
 Issue and PR templates become available through GitHub after they reach the
 default branch; no default-branch change is needed for this workflow.
+
+GitHub blocked-by relationships express the initial dependency chain. New items
+default to Backlog; the spike starts in Ready. The project's default auto-close
+workflow is disabled so moving a card to Done does not itself close an issue.
+Completion requires checking acceptance and closing through a completed PR or
+reviewed spike. No additional workflow runner or project-management dependency
+is introduced.
 
 ## Scope — 2026-09-14
 
