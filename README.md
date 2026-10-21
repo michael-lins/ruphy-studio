@@ -7,6 +7,19 @@
 Ruphy Studio is a Rapid Application Development (RAD) project for Ruby on Rails
 with a Delphi-inspired experience.
 
+**Your running Rails application is the canvas. Your ERB stays the source of truth.**
+
+Select a supported field on the actual page, change its placeholder, and see the
+edit saved to its Rails partial. Herb provides structural understanding of the
+source; Ruphino brings the editing controls into your application.
+
+**Status: working proof of concept.** Today you can try a Customer form with two
+editable fields, source validation, structural diffs and guarded one-level undo.
+General visual editing and drag-and-drop are the direction, not shipped features.
+
+[Try the demo](#run) · [Follow development](https://github.com/users/michael-lins/projects/2)
+· [Contribute](CONTRIBUTING.md)
+
 It is my love letter to my 20-years-ago self.
 
 ## Vision
@@ -38,6 +51,13 @@ The form lives in a real Rails partial. **Undo last edit** restores its exact
 previous source, provided the partial still matches the latest successful edit.
 
 ## Run
+
+Clone the current implementation from `main`:
+
+```sh
+git clone https://github.com/michael-lins/ruphy-studio.git
+cd ruphy-studio
+```
 
 Ruby and tooling are managed by [mise](https://mise.jdx.dev/). The experiment pins
 Ruby 3.4.9, Rails 8.1.3's railties/actionpack, Puma 7.0.4 and Herb 0.10.3.
@@ -98,6 +118,8 @@ single-owner POC, not a general collaborative editor.
 
 See [decisions](docs/decisions.md), [verification results](docs/progress.md),
 [Herb source research](docs/herb-research.md), and [historical POCs](docs/history.md).
+The former desktop implementation is preserved on
+[`codex/legacy-desktop-poc`](https://github.com/michael-lins/ruphy-studio/tree/codex/legacy-desktop-poc).
 
 ## Contributing
 

@@ -1,5 +1,26 @@
 # Milestones and verification
 
+## Rails/Herb promotion to main — 2026-10-21
+
+The current POC becomes the repository's main implementation, with the former
+desktop tip preserved on `codex/legacy-desktop-poc` at `b333b47`. The promotion
+fast-forwards the existing history. The README now introduces the working
+visual-to-source loop, labels its POC scope, and includes clone instructions.
+Contributor guidance directs new work to `main`.
+
+Verification before publication:
+
+- Compared local and live remote branch tips and confirmed the old main is an
+  ancestor of `feature/herb-rad-poc` at `63bba01`.
+- `mise run test`: **24 tests / 86 assertions, no failures, errors or skips**.
+  Rack emitted its existing future-frozen-string warning.
+- Reviewed documentation changes and ran `git diff --check`.
+- No application behavior changed and no interactive browser proof was rerun.
+  No development server was started; the suite's temporary resident is stopped
+  and reaped by its cleanup.
+
+This is publication of the existing POC, not a beta or v1 release.
+
 ## Contributor workflow and GitHub tracking — 2026-09-16
 
 Added bug and feature/spike issue forms, a Discussions link in the issue chooser,

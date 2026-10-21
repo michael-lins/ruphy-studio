@@ -42,9 +42,10 @@ its issue; verify acceptance and close through the completed PR or spike review.
 ## Make a small change
 
 1. Agree on an issue's scope and comment before starting to avoid duplicated work.
-2. Follow the [mise setup](README.md#run) and create a focused branch from the
-   agreed base. During the Herb POC, confirm the base with the maintainer because
-   the active experiment may be ahead of `main`.
+2. Follow the [mise setup](README.md#run) and create a focused branch from `main`,
+   which contains the current Rails/Herb implementation. Target `main` with new
+   pull requests. The former desktop implementation is preserved on
+   `codex/legacy-desktop-poc` for historical reference.
 3. For behavior changes, write a focused test, observe the expected failure,
    implement the smallest fix, then refactor with tests green. For documentation,
    review content and links; do not add tests merely to mirror prose.

@@ -1,5 +1,17 @@
 # Ruphy Studio decisions
 
+## Rails/Herb becomes the main implementation — 2026-10-21
+
+Promote `feature/herb-rad-poc` to `main` with a fast-forward, preserving the full
+history. The former `main` tip, `b333b47`, is retained on
+`codex/legacy-desktop-poc`. New contributions target `main`; the original Herb
+feature branch remains as a reference. No branch is force-pushed or deleted.
+
+The public README leads with the running Rails page as canvas and real ERB as
+source of truth. It describes the implemented placeholder-editing and undo loop
+as a working POC, separately from the broader visual-development vision. This
+promotion does not declare a beta or v1 release.
+
 ## Work tracking — 2026-09-16
 
 GitHub Issues own the backlog, the public
